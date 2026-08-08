@@ -1,0 +1,84 @@
+networks:
+    vpn_net:
+        driver: bridge
+        ipam:
+            config:
+            # A subnet is a range of addresses that are considered "part of the same network"
+            # Notation: 172.0.0.0/24 = first 24 bits are fixed, so the subnet contains addresses 172.0.0.0 - 172.0.0.255
+
+            # A Docker Container is a "VM" (*) whose sole purpose is to run some application. It comes with
+            # its own filesystem, dependencies, etc. Everything you need to run the application
+
+            # (*) A docker container is not really a VM, but for our mental model it can be thought
+            # of this way
+
+            # We will run VPN and AdBlock processes each in its own Docker container. To do this, these
+            # containers will need consistent static IPs that never change. So, we define a subnet to
+            # reserve a range of addresses for these applications, and later assign them as fit.
+
+            # I identify a subnet that is
+            # 1. private (it will not collide with a public internet address)
+            # 2. must not overlap with any subnets already claimed on the host
+                - subnet: 172.20.0.0/24
+
+services:
+    wg-easy:
+        image: ghcr.io/wg-easy/wg-easy:15.3   # look up current tag, don't use "latest"
+        container_name: wg-easy
+        # When the machine boots up, start this docker container unless I
+        # deliberately stopped it before shutdown
+        restart: unless-stopped
+        environment:
+            INSECURE: true
+        volumes:
+            - ./wireguard:/etc/wireguard
+        ports:
+            # First entry means "listen for udp traffic on machine ${LAN_IP} port 51820"
+            # send any such traffic to wg-easy Docker port 51820
+
+            # similar for 51821 (admin UI)
+            - "${LAN_IP}:51820:51820/udp"
+            - "${LAN_IP}:51821:51821/tcp"
+        cap_add:
+            - NET_ADMIN
+            - SYS_MODULE
+        sysctls:
+            - net.ipv4.ip_forward=1
+            - net.ipv4.conf.all.src_valid_mark=1
+        networks:
+            vpn_net:
+
+    adguard-home:
+        image: adguard/adguardhome:v0.107.78
+        container_name: adguard-home
+        # When the machine boots up, start this docker container unless I
+        # deliberately stopped it before shutdown
+        restart: unless-stopped
+        volumes:
+            - ./adguard/conf:/opt/adguardhome/conf
+            - ./adguard/work:/opt/adguardhome/work
+        ports:
+            # Port 3000 is the admin UI
+
+            # For the VPN + adblock configuration, we dont actually need port 53.
+            # However in the future, we could point the router's DNS server at
+            # <LAN_IP>:53 and we would have this DNS-based adblock for the entire
+            # LAN. If and when that day comes, uncomment the 2 "port 53" lines
+            # - "${LAN_IP}:53:53/tcp"
+            # - "${LAN_IP}:53:53/udp"
+            - "${LAN_IP}:3000:3000/tcp"
+        networks:
+            vpn_net:
+                # Tell docker to assign this specific IP to adguard-home container
+                # when it joins vpn_net, rather than letting Docker pick one
+                # automatically
+
+                # Make sure we pick an address inside the previously defined
+                # vpn_net subnet (172.20.0.2 - 172.20.0.254)
+                # .2 to .54 because
+                # .0 identigies the subnet itself, not an individual host on it
+                # Docker reserves .1 for its own internal stuff
+                # .255 is "broadcast" address - means "every host on the subnet"
+
+                # I choose .2 because it is first available.
+                ipv4_address: 172.20.0.2
