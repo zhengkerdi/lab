@@ -19,6 +19,13 @@ networks:
             # I identify a subnet that is
             # 1. private (it will not collide with a public internet address)
             # 2. must not overlap with any subnets already claimed on the host
+
+            # We reserve this subnet for the docker containers in JUST this VPN
+            # section of the lab.
+
+            # These addresses will only be accessible from within this machine.
+            # Other machines on the LAN will have no access to 172.20.0.x as defined
+            # on this machine.
                 - subnet: 172.20.0.0/24
 
 services:
@@ -47,6 +54,9 @@ services:
             - net.ipv4.conf.all.src_valid_mark=1
         networks:
             vpn_net:
+                # Assign WireGuard to use the below address
+                # Exact same logic as adguard-home.networks.vpn_net
+                ipv4_address: 172.20.0.3
 
     adguard-home:
         image: adguard/adguardhome:v0.107.78
@@ -81,4 +91,13 @@ services:
                 # .255 is "broadcast" address - means "every host on the subnet"
 
                 # I choose .2 because it is first available.
+
+                # Important: 172.20.0.2 only exists in the scope of the machine
+                # hosting these docker containers. If another machine on the LAN
+                # tries to access 172.20.0.2, it will not know how to resolve that
+                # address. **Only this machine knows how to resolve 172.20.0.2**.
+
+                # Also on this machine, WireGuard handles VPNs. So, WireGuard traffic
+                # *will* be able to use 172.20.0.2 as a DNS server, since it will
+                # originate from this same machine.
                 ipv4_address: 172.20.0.2

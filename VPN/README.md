@@ -32,6 +32,19 @@ Verify with `sysctl net.ipv4.ip_forward`. Should see `net.ipv4.ip_forward = 1`
 
 This configuration option permits the kernel to forward packets between network interfaces, allowing us to forward VPN client traffic to the Internet.
 
+- Open the file `/etc/modules-load.d/99-homelab-wireguard-iptablesmodules.conf` and write the following lines
+```
+ip_tables
+iptable_nat
+ip6_tables
+ip6table_nat
+```
+WireGuard clients will receive addresses like `10.8.0.2`. These are private addresses that are only meaningful within the WireGuard network. A device on the public internet does not know how to reach `10.8.0.2`. That is like addressing a letter to "Apartment 306". If a WireGuard client sends a packet to somewhere with source address `10.8.0.2`, the reply would have nowhere valid to come back to.
+
+NAT: Network Address Translation. Rewrites the address so it looks like it came from a real public internet address.
+
+Configuring these options allows WireGuard to access the tools to perform this.
+
 - Configure `ufw`: rate-limited SSH (`22/tcp`, v4+v6), allowed WireGuard (`51820/udp`, v4+v6), default `deny incoming` / `allow outgoing`
 
     1. `sudo ufw limit OpenSSH` - allow ssh connections to this machine (on port 22). `limit` instead of `allow` to guard against brute-force - deny an IP after repeated failed connection attmepts in a short window.
@@ -69,6 +82,9 @@ At the time of writing, this machine uses NetworkManager (`nmcli`). Others may u
 
 - `cd lab/VPN` + `docker compose up -d` - start the WireGuard and AdGuard docker containers as defined in `docker-compose.yml`
 - Complete AdGuard admin UI setup. On a broswer, go to `<LAN_IP>:3000`. Setup according to the instructions. Choose any sensible Upstream DNS server, choose your own block lists, etc
+    - Admin Web Interface - the GUI for AdGuard home. Make this listen on all interfaces on port 3000.
+    - DNS Server - the listener for DNS requests. Make this listen on `172.20.0.2` port `53`.
+        - Earlier, we defined the address `172.20.0.2` to be the address of the DNS server. Port `53` is default.
 - Complete WireGuard admin UI setup. On a broswer, go to `<LAN_IP>:51821`. Enter `Host = vpn.kerdi.ca` and `Port = 51820`.
 - Confirm the admin UIs are not reachable from outside the general internet. Try hitting `http://<IP address>:51821` and `http://<IP address>:3000` from a phone on cellular data, should not work.
 
