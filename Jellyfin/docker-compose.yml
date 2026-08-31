@@ -1,0 +1,58 @@
+services:
+    jellyfin:
+        image: linuxserver/jellyfin:10.11.11
+        container_name: jellyfin
+        restart: unless-stopped
+        environment:
+            # From the .env file
+            PUID: ${PUID}
+            PGID: ${PGID}
+            TZ: ${TZ}
+        volumes:
+            # <x>:<y> syntax
+            #     x: path on host
+            #     y: path on container
+
+            # Tell Docker to create `lab/Jellyfin/config` folder on
+            # the host machine. The Jellyfin process inside the Docker
+            # container will be able to read/write from this directory
+            # This config folder must NOT be owned by `root`, or we cannot
+            # read/write to it without elevated permission (see README)
+            # To get around this, ensure PUID and PGID are set correctly
+
+            # Similarly, we will need to point the container to the relevant
+            # MEDIA_PATH we set in the env file
+            - ./config:/config
+            - ${MEDIA_PATH}:/data/media
+        ports:
+            # This will be of the form "${LAN_IP}:<host_port>:<container_port>/<protocol>"
+
+            # LAN_IP: set in the .env file
+            # host_port: the port on the host machine whose traffic will get
+            # forwarded into the Docker container
+
+            # container_port: the port inside the Docker container
+            # that listens for traffic
+
+            # protocol: tcp/udp
+
+            # Jellyfin is hardcoded to listen for traffic on port 8096 inside
+            # the container. so container_port MUST BE 8096
+
+            # This one port services client traffic AND the admin web UI
+            
+            # Choose any available host port. To check if a port is available,
+            # ss -tlnp | grep <port>
+            - "${LAN_IP}:8096:8096/tcp"
+        devices:
+            # form "<host_device_path>:<container_device_path>"
+            # Run `ls /dev/dri` on the machine to see what GPU nodes are available.
+            # Jellyfin can take this directory and figure out what devices to use
+            # for hardware-accelerated rendering
+
+            # Use the same path on both sides
+            - /dev/dri:/dev/dri
+        group_add:
+            # from the .env file
+            - "${RENDER_GID}"
+            - "${VIDEO_GID}"
