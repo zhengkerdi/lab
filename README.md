@@ -13,3 +13,8 @@ On this machine, we host a WireGuard VPN and route all its clients’ traffic to
 
 ## Jellyfin
 Netflix for free! Assuming we have mp4 files (sourced legally of course) stored on the lab machine hard drive, Jellyfin allows us to host a Netflix-like interface to stream these videos from any client. In addition to a web app, Jellyfin has a native app for iOS and many smart TVs, so the UI is excellent. See `Jellyfin/README.md` for more.
+
+# Immich
+Immich is a self-hosted photo and video cloud storage solution. To be honest, I did not do much for the setup. I downloaded `.env.example` and `docker-compose.ps` from the official Immich documentation, filled in the correct values, and it just works on its own!
+
+I have intentionally only exposed the application on the LAN. That means automatic backups will only occur when the client is connected to the LAN, either via the WireGuard VPN, or on the home wifi.
