@@ -30,7 +30,7 @@ networks:
 
 services:
     wg-easy:
-        image: ghcr.io/wg-easy/wg-easy:15.3   # look up current tag, don't use "latest"
+        image: ghcr.io/wg-easy/wg-easy:15.5.0   # look up current tag, don't use "latest"
         container_name: wg-easy
         # When the machine boots up, start this docker container unless I
         # deliberately stopped it before shutdown
@@ -59,7 +59,7 @@ services:
                 ipv4_address: 172.20.0.3
 
     adguard-home:
-        image: adguard/adguardhome:v0.107.78
+        image: adguard/adguardhome:v0.107.79
         container_name: adguard-home
         # When the machine boots up, start this docker container unless I
         # deliberately stopped it before shutdown
